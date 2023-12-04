@@ -19,9 +19,14 @@ func (d Challenge) A() {
 		fmt.Println("error reading input file")
 	}
 
-	for _, l := range s {
-		fmt.Println(l)
+	nums := s.findNumsAdjToSymbol()
+	results := 0
+
+	for _, n := range nums {
+		results += n
 	}
+
+	fmt.Println("Results for Day 3 Part A: ", results)
 
 }
 
@@ -60,16 +65,17 @@ func (s schematic) findNumsAdjToSymbol() []int {
 			loc := re.FindStringIndex(line)
 
 			lnBefore := int(math.Max(float64(0), float64(lineIndex-1)))
-			lnAfter := int(math.Min(float64(len(s)), float64(lineIndex+1))) + 1
+			lnAfter := int(math.Min(float64(len(s)), float64(lineIndex+2)))
 			before := int(math.Max(float64(loc[0]-1), float64(0)))
-			after := int(math.Min(float64(loc[1]+1), float64(len(line)))) + 1
+			after := int(math.Min(float64(loc[1]+1), float64(len(line)-1)))
 
-			part := s[lnBefore:lnAfter]
+			var part []string = s[lnBefore:lnAfter]
 			for _, ll := range part {
 				for _, char := range ll[before:after] {
 					c := string(char)
 					if isSymbol(c) && !inArray(results, n) {
 						results = append(results, n)
+						break
 					}
 				}
 			}
@@ -92,7 +98,7 @@ func findNumbersInLine(l string) ([]int, error) {
 	nums := re.FindAllStringSubmatch(l, -1)
 
 	if nums == nil {
-		return []int{}, errors.New("could not find any numbers")
+		return []int{}, nil
 	}
 
 	var results []int
@@ -109,9 +115,6 @@ func findNumbersInLine(l string) ([]int, error) {
 
 		}
 	}
-
-	//re := regexp.MustCompile(reg)
-	//match := re.FindStringSubmatch(s)
 
 	return results, nil
 }

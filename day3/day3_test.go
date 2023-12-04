@@ -25,7 +25,7 @@ func Test_findNumbersInLine(t *testing.T) {
 		"Test no numbers": {
 			s:        "..*...&...",
 			want:     []int{},
-			hasError: true,
+			hasError: false,
 		},
 		"Test many numbers": {
 			s:        "730....138.30..455.....................589..",
@@ -55,12 +55,12 @@ func Test_schematic_findNumAdjToSymbol(t *testing.T) {
 		wantErr bool
 	}
 	tests := test{
-		//"Single Line Test": {
-		//	s: schematic{
-		//		"617*.....12.",
-		//	},
-		//	want: []int{617},
-		//},
+		"Single Line Test": {
+			s: schematic{
+				"617*.....12.",
+			},
+			want: []int{617},
+		},
 		"Test example from the challenge": {
 			s: schematic{
 				"467..114..",

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/mikezm/advent-of-code-2023/day2"
+	"github.com/mikezm/advent-of-code-2023/day3"
 )
 
 type challenge interface {
@@ -17,6 +18,7 @@ type challenges map[int]challenge
 
 var challengeMap = challenges{
 	2: day2.Challenge{},
+	3: day3.Challenge{},
 }
 
 func main() {

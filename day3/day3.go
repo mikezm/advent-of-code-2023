@@ -7,6 +7,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"unicode"
 )
 
 const INPUTS = "./day3/input.txt"
@@ -19,7 +20,7 @@ func (d Challenge) A() {
 		fmt.Println("error reading input file")
 	}
 
-	nums := s.findNumsAdjToSymbol()
+	nums := s.findAdj()
 	results := 0
 
 	for _, n := range nums {
@@ -31,10 +32,13 @@ func (d Challenge) A() {
 }
 
 func (d Challenge) B() {
-	fmt.Println("function B() not yet implemented")
+	_, err := readSchematic()
+	if err != nil {
+		fmt.Println("error reading input file")
+	}
 }
 
-type schematic []string
+type schematic [][]rune
 
 func readSchematic() (schematic, error) {
 	ir, err := read.NewReader(INPUTS)
@@ -45,52 +49,67 @@ func readSchematic() (schematic, error) {
 
 	s := schematic{}
 	for _, line := range ir.Lines() {
-		s = append(s, line)
+		s = append(s, []rune(line))
 	}
 
 	return s, nil
 }
 
-func (s schematic) findNumsAdjToSymbol() []int {
+func (s schematic) findAdj() []int {
 	var results []int
-	for lineIndex, line := range s {
-		nums, err := findNumbersInLine(line)
-		if err != nil {
-			return results
-		}
+	var numStr string
 
-		for _, n := range nums {
-			numStr := fmt.Sprintf("%d", n)
-			re := regexp.MustCompile(numStr)
-			loc := re.FindStringIndex(line)
+	for rowIndex, chars := range s {
+		for charIndex, char := range chars {
+			if unicode.IsDigit(char) {
+				numStr = fmt.Sprintf("%s%s", numStr, string(char))
+			} else if len(numStr) > 0 {
+				before := int(math.Max(float64(charIndex-len(numStr)-1), float64(0)))
+				rowBefore := int(math.Max(float64(0), float64(rowIndex-1)))
+				rowAfter := int(math.Min(float64(len(s)-1), float64(rowIndex+1)))
 
-			lnBefore := int(math.Max(float64(0), float64(lineIndex-1)))
-			lnAfter := int(math.Min(float64(len(s)), float64(lineIndex+2)))
-			before := int(math.Max(float64(loc[0]-1), float64(0)))
-			after := int(math.Min(float64(loc[1]+1), float64(len(line)-1)))
-
-			var part []string = s[lnBefore:lnAfter]
-			for _, ll := range part {
-				for _, char := range ll[before:after] {
-					c := string(char)
-					if isSymbol(c) && !inArray(results, n) {
-						results = append(results, n)
+				isPart := false
+				for i := before; i <= charIndex; i++ {
+					if isPartSymbol(chars[i]) || isPartSymbol(s[rowBefore][i]) || isPartSymbol(s[rowAfter][i]) {
+						isPart = true
 						break
 					}
 				}
+
+				if isPart {
+					num, err := strconv.Atoi(numStr)
+					if err == nil {
+						results = append(results, num)
+					}
+				}
+
+				numStr = ""
+			}
+
+			if len(numStr) > 0 && charIndex == len(chars)-1 {
+				isPart := false
+				for i := charIndex - len(numStr) - 1; i <= charIndex; i++ {
+					if isPartSymbol(chars[i]) ||
+						isPartSymbol(s[int(math.Max(float64(0), float64(rowIndex-1)))][i]) ||
+						isPartSymbol(s[int(math.Min(float64(len(s)-1), float64(rowIndex+1)))][i]) {
+						isPart = true
+						break
+					}
+				}
+
+				if isPart {
+					num, err := strconv.Atoi(numStr)
+					if err == nil {
+						results = append(results, num)
+					}
+				}
+
+				numStr = ""
 			}
 		}
 	}
-	return results
-}
 
-func inArray(s []int, n int) bool {
-	for _, v := range s {
-		if v == n {
-			return true
-		}
-	}
-	return false
+	return results
 }
 
 func findNumbersInLine(l string) ([]int, error) {
@@ -103,25 +122,89 @@ func findNumbersInLine(l string) ([]int, error) {
 
 	var results []int
 	for _, row := range nums {
-		for _, n := range row {
-			num, err := strconv.Atoi(n)
-			if err != nil {
-				return []int{}, errors.New("error converting number to int")
-			}
-
-			if !inArray(results, num) {
-				results = append(results, num)
-			}
-
+		num, err := strconv.Atoi(row[0])
+		if err != nil {
+			return []int{}, errors.New("error converting number to int")
 		}
+
+		results = append(results, num)
 	}
 
 	return results, nil
 }
 
-func isSymbol(s string) bool {
+func isSymbol(s rune) bool {
 	re := regexp.MustCompile(`(\W)`)
-	match := re.FindString(s)
+	match := re.FindString(string(s))
+
+	return match != ""
+}
+
+func isPartSymbol(r rune) bool {
+	re := regexp.MustCompile(`(\W)`)
+	match := re.FindString(string(r))
 
 	return match != "" && match != "."
+}
+
+type symbolLoc struct {
+	row, col int
+}
+
+func (s schematic) findSymbolLocations() []symbolLoc {
+	var symbols []symbolLoc
+	for rowIdx, row := range s {
+		for colIdx, char := range row {
+			if isPartSymbol(char) {
+				symbols = append(symbols, symbolLoc{
+					row: rowIdx,
+					col: colIdx,
+				})
+			}
+		}
+	}
+	return symbols
+}
+
+type numberLoc struct {
+	row, start, end, value int
+}
+
+func (s schematic) findNumberLocations() []numberLoc {
+	var numbers []numberLoc
+	var numStr string
+
+	for rowIdx, row := range s {
+		for colIdx, col := range row {
+			if unicode.IsDigit(col) {
+				numStr = fmt.Sprintf("%s%s", numStr, string(col))
+			} else if len(numStr) > 0 {
+				num, err := strconv.Atoi(numStr)
+				if err == nil {
+					numbers = append(numbers, numberLoc{
+						row:   rowIdx,
+						start: colIdx - len(numStr),
+						end:   colIdx - 1,
+						value: num,
+					})
+				}
+				numStr = ""
+			}
+
+			if len(numStr) > 0 && colIdx == len(row)-1 {
+				num, err := strconv.Atoi(numStr)
+				if err == nil {
+					numbers = append(numbers, numberLoc{
+						row:   rowIdx,
+						start: colIdx - len(numStr) + 1,
+						end:   colIdx,
+						value: num,
+					})
+				}
+				numStr = ""
+			}
+		}
+	}
+
+	return numbers
 }

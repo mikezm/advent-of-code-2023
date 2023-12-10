@@ -27,7 +27,7 @@ func (d Challenge) A() {
 		results += c.calculatePoints()
 	}
 
-	fmt.Println("Results for Day 4 PaRT A")
+	fmt.Println("Results for Day 4 Part A")
 	fmt.Println("Total points for all cards: ", results)
 }
 

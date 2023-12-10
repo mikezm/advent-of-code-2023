@@ -57,30 +57,41 @@ func Test_schematic_findNumAdjToSymbol(t *testing.T) {
 	tests := test{
 		"Single Line Test": {
 			s: schematic{
-				"617*.....12.",
+				[]rune("617*.....12."),
 			},
 			want: []int{617},
 		},
 		"Test example from the challenge": {
 			s: schematic{
-				"467..114..",
-				"...*......",
-				"..35..633.",
-				"......#...",
-				"617*......",
-				".....+.58.",
-				"..592.....",
-				"......755.",
-				"...$.*....",
-				".664.598..",
+				[]rune("467..114.."),
+				[]rune("...*......"),
+				[]rune("..35..633."),
+				[]rune("......#..."),
+				[]rune("617*......"),
+				[]rune(".....+.58."),
+				[]rune("..592....."),
+				[]rune("......755."),
+				[]rune("...$.*...."),
+				[]rune(".664.598.."),
 			},
 			want: []int{467, 35, 633, 617, 592, 755, 664, 598},
-			//two numbers are not part numbers because they are not adjacent to a symbol: 114 (top right) and 58
+			//two numbers are not part numbers because they are not adjacent to a symbolLoc: 114 (top right) and 58
+		},
+		"Bigger Test": {
+			s: schematic{
+				[]rune("..172..............................454..46.......507..........809......923.778..................793..............137.............238........"),
+				[]rune("............/.........712........=.......*................515.*...........*.......690.........../..........658.........=.........*.........."),
+				[]rune(".........823.835........%.........710.....749........134..%............................#812...&.....925.../..........276.......386.........."),
+				[]rune("519..................13......341.................481....=.....$............-.......211.......92.......*....................................*"),
+				[]rune("............832*105..-........$..................*.........797.....535..932.........*....152...........123.........678.540...........-...6.7"),
+			},
+			want: []int{46, 809, 923, 778, 793, 238, 712, 515, 658, 823, 835, 710, 749, 134, 812, 925, 276, 386, 13, 341, 481, 211, 92, 832, 105, 797, 932, 123, 7},
+			//two numbers are not part numbers because they are not adjacent to a symbolLoc: 114 (top right) and 58
 		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			if got := tt.s.findNumsAdjToSymbol(); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.s.findAdj(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("findNumAdjToSymbol() = %v, want %v", got, tt.want)
 			}
 		})
@@ -89,27 +100,113 @@ func Test_schematic_findNumAdjToSymbol(t *testing.T) {
 
 func Test_matchSymbol(t *testing.T) {
 	type test map[string]struct {
-		s    string
+		s    rune
 		want bool
 	}
 	tests := test{
 		"matches $": {
-			s:    "$",
+			s:    '$',
 			want: true,
 		},
 		"matches &": {
-			s:    "&",
+			s:    '&',
 			want: true,
 		},
-		"does not match a .": {
-			s:    ".",
-			want: false,
+		"matches a .": {
+			s:    '.',
+			want: true,
 		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			if got := isSymbol(tt.s); got != tt.want {
 				t.Errorf("isSymbol() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_schematic_findSymbolLocations(t *testing.T) {
+	type test map[string]struct {
+		s       schematic
+		want    []symbolLoc
+		wantErr bool
+	}
+	tests := test{
+		"Single Line Test": {
+			s: schematic{
+				[]rune("$..*.....12."),
+			},
+			want: []symbolLoc{
+				{0, 0},
+				{0, 3},
+			},
+		},
+		"several lines": {
+			s: schematic{
+				[]rune("467..114.."),
+				[]rune("...*......"),
+				[]rune("..35..633."),
+				[]rune("......#..."),
+				[]rune("617*......"),
+				[]rune(".......58*"),
+			},
+			want: []symbolLoc{
+				{1, 3},
+				{3, 6},
+				{4, 3},
+				{5, 9},
+			},
+			//two numbers are not part numbers because they are not adjacent to a symbolLoc: 114 (top right) and 58
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := tt.s.findSymbolLocations(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("findSymbolLocations() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_schematic_findNumberLocations(t *testing.T) {
+	type test map[string]struct {
+		s       schematic
+		want    []numberLoc
+		wantErr bool
+	}
+	tests := test{
+		"Single Line Test": {
+			s: schematic{
+				[]rune("$..*...12."),
+			},
+			want: []numberLoc{
+				{0, 7, 8, 12},
+			},
+		},
+		"several lines": {
+			s: schematic{
+				[]rune("467..114.."),
+				[]rune("...*......"),
+				[]rune("..35..633."),
+				[]rune("......#..."),
+				[]rune("617*......"),
+				[]rune("........58"),
+			},
+			want: []numberLoc{
+				{0, 0, 2, 467},
+				{0, 5, 7, 114},
+				{2, 2, 3, 35},
+				{2, 6, 8, 633},
+				{4, 0, 2, 617},
+				{5, 8, 9, 58},
+			},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := tt.s.findNumberLocations(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("findNumberLocations() = %v, want %v", got, tt.want)
 			}
 		})
 	}

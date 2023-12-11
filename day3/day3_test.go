@@ -211,3 +211,97 @@ func Test_schematic_findNumberLocations(t *testing.T) {
 		})
 	}
 }
+
+func Test_schematic_findGearRatios(t *testing.T) {
+	type test map[string]struct {
+		s    schematic
+		want []int
+	}
+	tests := test{
+		"Single Line Test": {
+			s: schematic{
+				[]rune("617*12........"),
+			},
+			want: []int{7404},
+		},
+		"Test example from the challenge": {
+			s: schematic{
+				[]rune("467..114.."),
+				[]rune("...*......"),
+				[]rune("..35..633."),
+				[]rune("......#..."),
+				[]rune("617*......"),
+				[]rune(".....+.58."),
+				[]rune("..592....."),
+				[]rune("......755."),
+				[]rune("...$.*...."),
+				[]rune(".664.598.."),
+			},
+			want: []int{16345, 451490},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := tt.s.findGearRatios(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("findNumAdjToSymbol() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isAdjacent(t *testing.T) {
+	type test map[string]struct {
+		num  numberLoc
+		sym  symbolLoc
+		want bool
+	}
+	tests := test{
+		"same line": {
+			num:  numberLoc{0, 0, 2, 612},
+			sym:  symbolLoc{0, 3},
+			want: true,
+		},
+		"symbol diagonal below right": {
+			num:  numberLoc{0, 0, 2, 467},
+			sym:  symbolLoc{1, 3},
+			want: true,
+		},
+		"symbol diagonal above right": {
+			num:  numberLoc{2, 2, 3, 35},
+			sym:  symbolLoc{1, 3},
+			want: true,
+		},
+		"diagonal above right": {
+			num:  numberLoc{2, 2, 3, 35},
+			sym:  symbolLoc{1, 3},
+			want: true,
+		},
+		"diagonal below too far lef": {
+			num:  numberLoc{0, 5, 7, 114},
+			sym:  symbolLoc{1, 3},
+			want: false,
+		},
+		//	"Test example from the challenge": {
+		//		s: schematic{
+		//			[]rune("467..114.."),
+		//			[]rune("...*......"),
+		//			[]rune("..35..633."),
+		//			[]rune("......#..."),
+		//			[]rune("617*......"),
+		//			[]rune(".....+.58."),
+		//			[]rune("..592....."),
+		//			[]rune("......755."),
+		//			[]rune("...$.*...."),
+		//			[]rune(".664.598.."),
+		//		},
+		//		want: []int{16345, 467835},
+		//	},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := isAdjacent(tt.num, tt.sym); got != tt.want {
+				t.Errorf("isAdjacent() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

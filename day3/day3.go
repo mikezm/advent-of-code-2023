@@ -32,10 +32,19 @@ func (d Challenge) A() {
 }
 
 func (d Challenge) B() {
-	_, err := readSchematic()
+	s, err := readSchematic()
 	if err != nil {
 		fmt.Println("error reading input file")
 	}
+
+	nums := s.findGearRatios()
+	results := 0
+
+	for _, n := range nums {
+		results += n
+	}
+
+	fmt.Println("Results for Day 3 Part B: ", results)
 }
 
 type schematic [][]rune
@@ -207,4 +216,40 @@ func (s schematic) findNumberLocations() []numberLoc {
 	}
 
 	return numbers
+}
+
+func isAdjacent(n numberLoc, s symbolLoc) bool {
+	if n.row == s.row {
+		if s.col == n.start-1 || s.col == n.end+1 {
+			return true
+		}
+	}
+
+	if s.row == n.row-1 || s.row == n.row+1 {
+		if s.col >= n.start-1 && s.col <= n.end+1 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s schematic) findGearRatios() []int {
+	var data []int
+	var gears []int
+
+	for _, symbol := range s.findSymbolLocations() {
+		gears = []int{}
+		for _, number := range s.findNumberLocations() {
+			if isAdjacent(number, symbol) {
+				gears = append(gears, number.value)
+			}
+		}
+
+		if len(gears) == 2 {
+			data = append(data, gears[0]*gears[1])
+		}
+	}
+
+	return data
 }

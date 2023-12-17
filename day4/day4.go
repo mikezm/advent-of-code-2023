@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mikezm/advent-of-code-2023/read"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ const INPUTS = "./day4/input.txt"
 
 type Challenge struct{}
 
-func (d Challenge) A() {
+func (c Challenge) A() {
 	ir, err := read.NewReader(INPUTS)
 
 	if err != nil {
@@ -21,8 +22,10 @@ func (d Challenge) A() {
 		return
 	}
 
+	lines := ir.Lines()
+
 	results := 0
-	for _, line := range ir.Lines() {
+	for _, line := range lines {
 		c := readCardFromLine(line)
 		results += c.calculatePoints()
 	}
@@ -31,8 +34,67 @@ func (d Challenge) A() {
 	fmt.Println("Total points for all cards: ", results)
 }
 
-func (d Challenge) B() {
-	fmt.Println("function B() not yet implemented")
+type cardCount struct {
+	count int
+	c     *card
+}
+
+type cardMap map[int]cardCount
+
+func (cm cardMap) increment(c *card) {
+	cc, ok := cm[c.num]
+	if !ok {
+		cm[c.num] = cardCount{1, c}
+	} else {
+		cm[c.num] = cardCount{cc.count + 1, c}
+	}
+}
+
+func countCards(lines []string) int {
+	var results int
+	cm := make(cardMap)
+
+	for lnIdx, line := range lines {
+		c := readCardFromLine(line)
+		numMatches := c.calculateMatches()
+		cm.increment(&c)
+
+		if numMatches > 0 {
+			maxLn := int(math.Min(float64(len(lines)-1), float64(lnIdx+numMatches+1)))
+			minLn := int(math.Min(float64(len(lines)-1), float64(lnIdx+1)))
+
+			for i := minLn; i < maxLn; i++ {
+				curCount := cm[i].count
+				for j := 0; j < curCount; j++ {
+					cc := readCardFromLine(lines[i])
+					cm.increment(&cc)
+				}
+
+			}
+		}
+	}
+
+	for _, cd := range cm {
+		results += cd.count
+	}
+
+	return results
+}
+
+func (c Challenge) B() {
+	ir, err := read.NewReader(INPUTS)
+
+	if err != nil {
+		fmt.Println("failed to read inputs")
+		return
+	}
+
+	lines := ir.Lines()
+
+	results := countCards(lines)
+
+	fmt.Println("Results for Day 4 Part B")
+	fmt.Println("Total points for all cards: ", results)
 }
 
 type card struct {
@@ -41,10 +103,10 @@ type card struct {
 	have []int
 }
 
-func (c card) calculatePoints() int {
+func (cd card) calculatePoints() int {
 	matches := 0
-	for _, v := range c.have {
-		if inArray(c.win, v) {
+	for _, v := range cd.have {
+		if inArray(cd.win, v) {
 			matches += 1
 		}
 	}
@@ -61,8 +123,19 @@ func (c card) calculatePoints() int {
 	return points
 }
 
+func (cd card) calculateMatches() int {
+	matches := 0
+	for _, v := range cd.have {
+		if inArray(cd.win, v) {
+			matches += 1
+		}
+	}
+
+	return matches
+}
+
 func readCardFromLine(l string) card {
-	cardNum, remainder, sErr := split(l, `Card (\d+): (.+)$`)
+	cardNum, remainder, sErr := split(l, `Card(\s+)(\d+): (.+)$`)
 	if sErr != nil {
 		return card{}
 	}
@@ -91,11 +164,11 @@ func split(s, reg string) (string, string, error) {
 	re := regexp.MustCompile(reg)
 	match := re.FindStringSubmatch(s)
 
-	if len(match) != 3 {
+	if len(match) != 4 {
 		return "", "", errors.New("could not find a match")
 	}
 
-	return match[1], match[2], nil
+	return match[2], match[3], nil
 }
 
 func findNumbersInLine(l string) []int {
@@ -108,17 +181,12 @@ func findNumbersInLine(l string) []int {
 
 	var results []int
 	for _, row := range nums {
-		for _, n := range row {
-			num, err := strconv.Atoi(n)
-			if err != nil {
-				return []int{}
-			}
-
-			if !inArray(results, num) {
-				results = append(results, num)
-			}
-
+		num, err := strconv.Atoi(row[0])
+		if err != nil {
+			return []int{}
 		}
+
+		results = append(results, num)
 	}
 
 	return results
